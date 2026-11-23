@@ -1,0 +1,22 @@
+{
+  "name": "provenance-release",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Reusable release-provenance workflow and SBOM compliance tooling.",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build:tsc": "tsc",
+    "test": "tsc && node --test dist/test/*.test.js",
+    "check-pins": "tsc && node dist/src/cli.js check-pins",
+    "dry-run": "tsc && node dist/src/cli.js dry-run",
+    "build": "npm run build:tsc && npm run check-pins && npm run dry-run"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.0",
+    "typescript": "5.9.3"
+  }
+}
