@@ -28,10 +28,38 @@ it attaches to the release. A validation failure fails the release.
 jobs:
   provenance:
     uses: riboseinc/provenance-release/.github/workflows/release.yml@<commit-sha>
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
     with:
       artifacts: dist/
       support-until: "2031-11-18"
 ```
+
+### Inputs
+
+- `artifacts` (required): Path to a built release artifact file or directory of artifacts.
+- `support-until` (required): Declared support end date in `YYYY-MM-DD` format. The workflow writes this value to `lifecycle.json` and appends a support-period section idempotently to the GitHub Release notes.
+- `artifact-name` (optional): GitHub Actions workflow artifact name to download into `artifacts` before scanning.
+- `release-tag` (optional): GitHub Release tag to update. Defaults to `github.ref_name`.
+- `author` (optional): SBOM author identity. Defaults to `github.repository_owner`.
+- `supplier` (optional): Component supplier identity. Defaults to `author`.
+- `attest` (optional, default `true`): Controls keyless SLSA Build Level 3 provenance generation through `actions/attest-build-provenance`. Private repositories skip attestation automatically with a notice under the Phase 1 exception.
+- `upload-release` (optional, default `true`): Controls uploading `*.spdx.json`, `*.cdx.json`, `NOTICE`, and `lifecycle.json` to the GitHub Release and updating release notes.
+
+## Local verification
+
+Run the three required verification gates locally with Node.js 22 or newer:
+
+```bash
+npm ci
+npm run typecheck
+npm test
+npm run build
+```
+
+`npm run build` compiles the TypeScript tooling, verifies that every GitHub Action and binary dependency is pinned to a full commit SHA or SHA-256 checksum, and runs an end-to-end provenance dry-run.
 
 ## Policy
 

@@ -1,0 +1,28 @@
+{
+  "tool": "syft",
+  "version": "1.57.2",
+  "releaseUrl": "https://github.com/anchore/syft/releases/tag/v1.57.2",
+  "checksumsUrl": "https://github.com/anchore/syft/releases/download/v1.57.2/syft_1.57.2_checksums.txt",
+  "platforms": {
+    "linux-x64": {
+      "filename": "syft_1.57.2_linux_amd64.tar.gz",
+      "url": "https://github.com/anchore/syft/releases/download/v1.57.2/syft_1.57.2_linux_amd64.tar.gz",
+      "sha256": "ad92bd3ec1b94a3df01d4d0aec199afa9c42b72e86da436ff5f837914d32706b"
+    },
+    "linux-arm64": {
+      "filename": "syft_1.57.2_linux_arm64.tar.gz",
+      "url": "https://github.com/anchore/syft/releases/download/v1.57.2/syft_1.57.2_linux_arm64.tar.gz",
+      "sha256": "8efe605309c98798e1ee0cffdcf8c05ca26819b4cd44c0b03650f1e963e9bdb6"
+    },
+    "darwin-x64": {
+      "filename": "syft_1.57.2_darwin_amd64.tar.gz",
+      "url": "https://github.com/anchore/syft/releases/download/v1.57.2/syft_1.57.2_darwin_amd64.tar.gz",
+      "sha256": "73c6100bc43fbcc1c99aed3428d859c6289c4076be7e296dde7e427324c15908"
+    },
+    "darwin-arm64": {
+      "filename": "syft_1.57.2_darwin_arm64.tar.gz",
+      "url": "https://github.com/anchore/syft/releases/download/v1.57.2/syft_1.57.2_darwin_arm64.tar.gz",
+      "sha256": "38afbcc03a9d9afac2d7572432fd2c435e051e03930582ea90f4710ffb515224"
+    }
+  }
+}

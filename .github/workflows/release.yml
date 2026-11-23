@@ -1,0 +1,203 @@
+name: Release Provenance
+
+on:
+  workflow_call:
+    inputs:
+      artifacts:
+        description: "Path to a built release artifact file or directory of artifacts."
+        required: true
+        type: string
+      artifact-name:
+        description: "Optional GitHub Actions workflow artifact name to download into the artifacts path."
+        required: false
+        type: string
+        default: ""
+      release-tag:
+        description: "GitHub Release tag. Defaults to github.ref_name when omitted."
+        required: false
+        type: string
+        default: ""
+      support-until:
+        description: "Declared support end date for this release stream in YYYY-MM-DD format."
+        required: true
+        type: string
+      author:
+        description: "SBOM author identity. Defaults to the repository owner when omitted."
+        required: false
+        type: string
+        default: ""
+      supplier:
+        description: "Software supplier identity. Defaults to the author value when omitted."
+        required: false
+        type: string
+        default: ""
+      attest:
+        description: "Generate keyless SLSA Build Level 3 provenance via Sigstore. Automatically skipped for private repositories."
+        required: false
+        type: boolean
+        default: true
+      upload-release:
+        description: "Upload generated provenance assets and stamp support-until into the GitHub Release notes."
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  provenance:
+    name: Generate and verify release provenance
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve workflow coordinates and attestation policy
+        id: ctx
+        shell: bash
+        env:
+          INPUT_RELEASE_TAG: ${{ inputs.release-tag }}
+          INPUT_AUTHOR: ${{ inputs.author }}
+          INPUT_SUPPLIER: ${{ inputs.supplier }}
+          INPUT_ATTEST: ${{ inputs.attest }}
+          IS_PRIVATE: ${{ github.event.repository.private }}
+          WORKFLOW_REF: ${{ github.workflow_ref }}
+          WORKFLOW_SHA: ${{ github.workflow_sha }}
+        run: |
+          set -euo pipefail
+          RELEASE_TAG="${INPUT_RELEASE_TAG:-${GITHUB_REF_NAME}}"
+          AUTHOR="${INPUT_AUTHOR:-${GITHUB_REPOSITORY_OWNER}}"
+          SUPPLIER="${INPUT_SUPPLIER:-${AUTHOR}}"
+
+          WORKFLOW_REPO="${WORKFLOW_REF%%/.github/*}"
+          WORKFLOW_PIN="${WORKFLOW_SHA:-${WORKFLOW_REF##*@}}"
+
+          SHOULD_ATTEST="false"
+          if [ "${INPUT_ATTEST}" = "true" ]; then
+            if [ "${IS_PRIVATE}" = "true" ]; then
+              echo "::notice::SLSA Build Level 3 attestation is skipped automatically because ${GITHUB_REPOSITORY} is a private repository (Phase 1 private-repository exception)."
+              SHOULD_ATTEST="false"
+            else
+              SHOULD_ATTEST="true"
+            fi
+          fi
+
+          {
+            echo "release_tag=${RELEASE_TAG}"
+            echo "author=${AUTHOR}"
+            echo "supplier=${SUPPLIER}"
+            echo "workflow_repo=${WORKFLOW_REPO}"
+            echo "workflow_pin=${WORKFLOW_PIN}"
+            echo "should_attest=${SHOULD_ATTEST}"
+            echo "is_private=${IS_PRIVATE:-false}"
+            echo "output_dir=${RUNNER_TEMP}/provenance-output"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Checkout calling repository
+        if: ${{ inputs.artifact-name == '' }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Download built release artifacts
+        if: ${{ inputs.artifact-name != '' }}
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: ${{ inputs.artifacts }}
+
+      - name: Checkout provenance workflow tooling
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ steps.ctx.outputs.workflow_repo }}
+          ref: ${{ steps.ctx.outputs.workflow_pin }}
+          path: _provenance-tooling
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          cache: "npm"
+          cache-dependency-path: _provenance-tooling/package-lock.json
+
+      - name: Build provenance tooling
+        shell: bash
+        working-directory: _provenance-tooling
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run build:tsc
+
+      - name: Generate and validate dual-format SBOMs, NOTICE, and lifecycle metadata
+        shell: bash
+        env:
+          ARTIFACTS_PATH: ${{ inputs.artifacts }}
+          OUTPUT_DIR: ${{ steps.ctx.outputs.output_dir }}
+          RELEASE_TAG: ${{ steps.ctx.outputs.release_tag }}
+          SUPPORT_UNTIL: ${{ inputs.support-until }}
+          AUTHOR: ${{ steps.ctx.outputs.author }}
+          SUPPLIER: ${{ steps.ctx.outputs.supplier }}
+          ATTEST_INPUT: ${{ inputs.attest }}
+          IS_PRIVATE: ${{ steps.ctx.outputs.is_private }}
+        run: |
+          set -euo pipefail
+          node _provenance-tooling/dist/src/cli.js generate \
+            --artifacts "${ARTIFACTS_PATH}" \
+            --output-dir "${OUTPUT_DIR}" \
+            --release-tag "${RELEASE_TAG}" \
+            --support-until "${SUPPORT_UNTIL}" \
+            --author "${AUTHOR}" \
+            --supplier "${SUPPLIER}" \
+            --repository "${GITHUB_REPOSITORY}" \
+            --attest "${ATTEST_INPUT}" \
+            --private-repo "${IS_PRIVATE}" \
+            --repo-root "${GITHUB_WORKSPACE}/_provenance-tooling"
+
+      - name: Generate keyless SLSA Build Level 3 provenance attestation
+        if: ${{ steps.ctx.outputs.should_attest == 'true' }}
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: ${{ inputs.artifacts }}
+
+      - name: Upload provenance assets and stamp GitHub Release notes
+        if: ${{ inputs.upload-release }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OUTPUT_DIR: ${{ steps.ctx.outputs.output_dir }}
+          RELEASE_TAG: ${{ steps.ctx.outputs.release_tag }}
+          SUPPORT_UNTIL: ${{ inputs.support-until }}
+          ATTEST_INPUT: ${{ inputs.attest }}
+          IS_PRIVATE: ${{ steps.ctx.outputs.is_private }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          ASSETS=(
+            "${OUTPUT_DIR}"/*.spdx.json
+            "${OUTPUT_DIR}"/*.cdx.json
+            "${OUTPUT_DIR}/NOTICE"
+            "${OUTPUT_DIR}/lifecycle.json"
+          )
+
+          gh release upload "${RELEASE_TAG}" "${ASSETS[@]}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --clobber
+
+          EXISTING_NOTES="${RUNNER_TEMP}/existing-release-notes.md"
+          STAMPED_NOTES="${RUNNER_TEMP}/stamped-release-notes.md"
+
+          gh release view "${RELEASE_TAG}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --json body \
+            --jq '.body // ""' > "${EXISTING_NOTES}"
+
+          node _provenance-tooling/dist/src/cli.js stamp-notes \
+            --input "${EXISTING_NOTES}" \
+            --output "${STAMPED_NOTES}" \
+            --support-until "${SUPPORT_UNTIL}" \
+            --release-tag "${RELEASE_TAG}" \
+            --repository "${GITHUB_REPOSITORY}" \
+            --attest "${ATTEST_INPUT}" \
+            --private-repo "${IS_PRIVATE}"
+
+          gh release edit "${RELEASE_TAG}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --notes-file "${STAMPED_NOTES}"
