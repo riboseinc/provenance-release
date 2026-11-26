@@ -56,6 +56,7 @@ jobs:
         id: ctx
         shell: bash
         env:
+          GH_TOKEN: ${{ github.token }}
           INPUT_RELEASE_TAG: ${{ inputs.release-tag }}
           INPUT_AUTHOR: ${{ inputs.author }}
           INPUT_SUPPLIER: ${{ inputs.supplier }}
@@ -71,6 +72,21 @@ jobs:
 
           WORKFLOW_REPO="${WORKFLOW_REF%%/.github/*}"
           WORKFLOW_PIN="${WORKFLOW_SHA:-${WORKFLOW_REF##*@}}"
+
+          # github.workflow_ref / github.workflow_sha always resolve to the caller
+          # workflow, not the reusable workflow. Query the run's referenced_workflows
+          # to obtain the exact pinned provenance-release repository and SHA.
+          if [[ ! "${WORKFLOW_REPO}" =~ /provenance-release$ ]]; then
+            REF_LINE="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+              --jq '.referenced_workflows[]? | select(.path | test("^[^/]+/provenance-release/\\.github/workflows/release\\.yml@")) | "\(.path)\t\(.sha)"' \
+              | awk 'NR==1 {print; exit}')"
+            if [[ -n "${REF_LINE}" ]]; then
+              REF_PATH="${REF_LINE%%$'\t'*}"
+              REF_SHA="${REF_LINE#*$'\t'}"
+              WORKFLOW_REPO="${REF_PATH%%/.github/*}"
+              WORKFLOW_PIN="${REF_SHA:-${REF_PATH##*@}}"
+            fi
+          fi
 
           SHOULD_ATTEST="false"
           if [ "${INPUT_ATTEST}" = "true" ]; then
