@@ -50,7 +50,7 @@ export interface EnrichContext {
   author: string;
   supplier: string;
   repository: string;
-  supportUntil: string;
+  supportUntil?: string | undefined;
   generationContext: string;
   sbomVersion: number;
   toolName: string;
@@ -63,7 +63,7 @@ export interface LifecycleDocument {
   schemaVersion: "1.0";
   repository: string;
   releaseTag: string;
-  supportUntil: string;
+  supportUntil?: string | undefined;
   publishedAt: string;
   author: string;
   attestation: {
@@ -104,7 +104,8 @@ export interface PipelineOptions {
   artifactsPath: string;
   outputDir: string;
   releaseTag: string;
-  supportUntil: string;
+  supportUntil?: string | undefined;
+  vex?: boolean | undefined;
   author: string;
   supplier?: string;
   repository: string;
@@ -129,8 +130,8 @@ export interface PipelineResult {
   noticePath: string;
   lifecyclePath: string;
   lifecycle: LifecycleDocument;
-  openvexPath: string;
-  openvex: OpenVexDocument;
+  openvexPath?: string | undefined;
+  openvex?: OpenVexDocument | undefined;
   checksumsPath: string;
   syftVersion: string;
 }

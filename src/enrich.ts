@@ -416,16 +416,18 @@ export function enrichSpdx3(
     });
   }
 
-  const supportAnnotationId = "SPDXRef:Annotation-SupportUntil";
-  if (!graph.some((n) => n.spdxId === supportAnnotationId)) {
-    graph.push({
-      type: "Annotation",
-      spdxId: supportAnnotationId,
-      creationInfo: creationInfoId,
-      annotationType: "other",
-      subject: annotationSubject,
-      statement: `${SUPPORT_UNTIL_PROPERTY}=${ctx.supportUntil}`,
-    });
+  if (ctx.supportUntil) {
+    const supportAnnotationId = "SPDXRef:Annotation-SupportUntil";
+    if (!graph.some((n) => n.spdxId === supportAnnotationId)) {
+      graph.push({
+        type: "Annotation",
+        spdxId: supportAnnotationId,
+        creationInfo: creationInfoId,
+        annotationType: "other",
+        subject: annotationSubject,
+        statement: `${SUPPORT_UNTIL_PROPERTY}=${ctx.supportUntil}`,
+      });
+    }
   }
 
   return doc;
@@ -480,11 +482,13 @@ export function enrichCycloneDx17(
     "cisa:sbom:author-signature",
     ctx.signatureReference,
   );
-  upsertProperty(
-    doc.metadata.properties,
-    SUPPORT_UNTIL_PROPERTY,
-    ctx.supportUntil,
-  );
+  if (ctx.supportUntil) {
+    upsertProperty(
+      doc.metadata.properties,
+      SUPPORT_UNTIL_PROPERTY,
+      ctx.supportUntil,
+    );
+  }
 
   const rootRef = doc.metadata.component?.["bom-ref"] ?? `root:${ctx.artifactName}`;
   const rootComponent: CycloneDxComponent = doc.metadata.component ?? {
