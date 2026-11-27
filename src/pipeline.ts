@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { buildChecksumsFile, type ChecksumEntry } from "./checksums.js";
 import {
   enrichCycloneDx17,
   enrichSpdx3,
@@ -21,9 +22,11 @@ import type {
 } from "./types.js";
 import {
   formatValidationReport,
+  missingStructuredSupportUntil,
   validateCycloneDx17,
   validateSpdx3,
 } from "./validate.js";
+import { buildOpenVexDocument, loadCuratedVexStatements } from "./vex.js";
 
 async function computeDirectoryDigest(dirPath: string): Promise<string> {
   const hash = createHash("sha256");
@@ -150,6 +153,7 @@ export async function runProvenancePipeline(
 
   const generated: GeneratedArtifactOutputs[] = [];
   const enrichedCdxDocs: CycloneDx17Document[] = [];
+  const checksumEntries: ChecksumEntry[] = [];
 
   for (const target of targets) {
     const spdxPath = path.join(options.outputDir, `${target.name}.spdx.json`);
@@ -208,6 +212,33 @@ export async function runProvenancePipeline(
       );
     }
 
+    const missingSupport = missingStructuredSupportUntil(
+      enrichedSpdx,
+      enrichedCdx,
+    );
+    if (missingSupport.length > 0) {
+      throw new Error(
+        `Structured support-until metadata missing for "${target.name}": ${missingSupport.join(", ")}`,
+      );
+    }
+
+    if (!target.isDirectory) {
+      checksumEntries.push({
+        name: path.basename(target.targetPath),
+        sha256: artifactSha256,
+      });
+    }
+    checksumEntries.push(
+      {
+        name: path.basename(spdxPath),
+        sha256: await computeFileSha256(spdxPath),
+      },
+      {
+        name: path.basename(cdxPath),
+        sha256: await computeFileSha256(cdxPath),
+      },
+    );
+
     enrichedCdxDocs.push(enrichedCdx);
     generated.push({
       artifactName: target.name,
@@ -236,11 +267,38 @@ export async function runProvenancePipeline(
     "utf8",
   );
 
+  const artifactPurls = enrichedCdxDocs
+    .map((doc) => doc.metadata.component?.purl)
+    .filter((purl): purl is string => Boolean(purl));
+  const curatedStatements = await loadCuratedVexStatements(repoRoot);
+  const openvex = buildOpenVexDocument({
+    author: options.author,
+    timestamp,
+    repository: options.repository,
+    releaseTag: options.releaseTag,
+    artifactPurls,
+    statements: curatedStatements,
+  });
+  const openvexPath = path.join(options.outputDir, "openvex.json");
+  await writeFile(openvexPath, `${JSON.stringify(openvex, null, 2)}\n`, "utf8");
+
+  checksumEntries.push(
+    { name: "NOTICE", sha256: await computeFileSha256(noticePath) },
+    { name: "lifecycle.json", sha256: await computeFileSha256(lifecyclePath) },
+    { name: "openvex.json", sha256: await computeFileSha256(openvexPath) },
+  );
+
+  const checksumsPath = path.join(options.outputDir, "SHA256SUMS.txt");
+  await writeFile(checksumsPath, buildChecksumsFile(checksumEntries), "utf8");
+
   return {
     artifacts: generated,
     noticePath,
     lifecyclePath,
     lifecycle,
+    openvexPath,
+    openvex,
+    checksumsPath,
     syftVersion,
   };
 }

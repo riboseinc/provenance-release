@@ -1,3 +1,5 @@
+import type { OpenVexDocument } from "./vex.js";
+
 export const CISA_2026_ELEMENTS = [
   "sbom_author",
   "sbom_author_signature",
@@ -127,5 +129,8 @@ export interface PipelineResult {
   noticePath: string;
   lifecyclePath: string;
   lifecycle: LifecycleDocument;
+  openvexPath: string;
+  openvex: OpenVexDocument;
+  checksumsPath: string;
   syftVersion: string;
 }

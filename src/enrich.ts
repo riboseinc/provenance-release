@@ -5,6 +5,14 @@ const NO_ASSERTION = "NOASSERTION";
 const SPDX_NO_ASSERTION_LICENSE =
   "https://spdx.org/rdf/3.0.1/terms/ExpandedLicensing/NoAssertionLicense";
 
+/**
+ * Canonical machine-readable key for the declared support end date, carried in
+ * both SBOM formats: CycloneDX `metadata.properties[]` and an SPDX Annotation
+ * statement (`<key>=<date>`). One token to search across formats for CRA-style
+ * consumers.
+ */
+export const SUPPORT_UNTIL_PROPERTY = "provenance:support-until";
+
 interface SpdxNode {
   type?: string;
   "@id"?: string;
@@ -416,7 +424,7 @@ export function enrichSpdx3(
       creationInfo: creationInfoId,
       annotationType: "other",
       subject: annotationSubject,
-      statement: `supportUntil=${ctx.supportUntil}`,
+      statement: `${SUPPORT_UNTIL_PROPERTY}=${ctx.supportUntil}`,
     });
   }
 
@@ -474,7 +482,7 @@ export function enrichCycloneDx17(
   );
   upsertProperty(
     doc.metadata.properties,
-    "provenance:support-until",
+    SUPPORT_UNTIL_PROPERTY,
     ctx.supportUntil,
   );
 

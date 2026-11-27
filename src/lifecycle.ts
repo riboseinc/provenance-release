@@ -98,7 +98,8 @@ export function renderSupportPeriodSection(params: {
     "## Support Period and Provenance",
     "",
     `This release (\`${params.releaseTag}\`) is supported until **${supportUntil}** (UTC).`,
-    "The machine-readable lifecycle record is attached to this release as `lifecycle.json`, alongside SPDX 3.0 (`*.spdx.json`), CycloneDX 1.7 (`*.cdx.json`), and `NOTICE`.",
+    "The machine-readable lifecycle record is attached to this release as `lifecycle.json`, alongside SPDX 3.0 (`*.spdx.json`), CycloneDX 1.7 (`*.cdx.json`), an OpenVEX statement set (`openvex.json`), `NOTICE`, and the release checksums (`SHA256SUMS.txt`). The declared support date is also carried as the structured `provenance:support-until` property in both SBOM formats.",
+    `The checksums file is itself attested; verify the entire release with \`gh attestation verify SHA256SUMS.txt -R ${params.repository}\`.`,
     attestationLine,
     SUPPORT_PERIOD_END_MARKER,
   ].join("\n");
