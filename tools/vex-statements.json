@@ -1,1 +1,58 @@
-[]
+[
+  {
+    "vulnerability": "CVE-2017-8418",
+    "aliases": ["GHSA-wmjf-jpjj-9f3j"],
+    "justification": "component_not_present",
+    "statusNotes": "rubocop is a development-only Gemfile dependency and is absent from both the metanorma and fontist tebako shipped closures (tebako-packages/*/closure/*.txt); it is not part of the distributed binaries. The dev tree resolves rubocop ~> 1, far above the fixed 0.49.0.",
+    "appliesTo": ["metanorma", "fontist"]
+  },
+  {
+    "vulnerability": "CVE-2020-36327",
+    "aliases": ["GHSA-fp4w-jxhp-m23p"],
+    "justification": "component_not_present",
+    "statusNotes": "bundler is a development-only Gemfile dependency of fontist and is absent from the fontist tebako shipped closure; it is not part of the distributed binary.",
+    "appliesTo": ["fontist"]
+  },
+  {
+    "vulnerability": "CVE-2021-43809",
+    "aliases": ["GHSA-fj7f-vq84-fh43"],
+    "justification": "component_not_present",
+    "statusNotes": "bundler is a development-only Gemfile dependency of fontist and is absent from the fontist tebako shipped closure; it is not part of the distributed binary.",
+    "appliesTo": ["fontist"]
+  },
+  {
+    "vulnerability": "CVE-2013-0334",
+    "aliases": ["GHSA-49jx-9cmc-xjxm"],
+    "justification": "component_not_present",
+    "statusNotes": "bundler is a development-only Gemfile dependency of fontist and is absent from the fontist tebako shipped closure; it is not part of the distributed binary.",
+    "appliesTo": ["fontist"]
+  },
+  {
+    "vulnerability": "CVE-2019-3881",
+    "aliases": ["GHSA-g98m-96g9-wfjq"],
+    "justification": "component_not_present",
+    "statusNotes": "bundler is a development-only Gemfile dependency of fontist and is absent from the fontist tebako shipped closure; it is not part of the distributed binary.",
+    "appliesTo": ["fontist"]
+  },
+  {
+    "vulnerability": "CVE-2016-7954",
+    "aliases": ["GHSA-jvgm-pfqv-887x"],
+    "justification": "component_not_present",
+    "statusNotes": "bundler is a development-only Gemfile dependency of fontist and is absent from the fontist tebako shipped closure; it is not part of the distributed binary.",
+    "appliesTo": ["fontist"]
+  },
+  {
+    "vulnerability": "CVE-2020-8130",
+    "aliases": ["GHSA-jppv-gw3r-w3q8"],
+    "justification": "component_not_present",
+    "statusNotes": "rake is a development-only Gemfile dependency of fontist and is absent from the fontist tebako shipped closure. Scoped to fontist only: rake IS shipped in metanorma (a runtime dependency of google-protobuf), so this claim must never apply there.",
+    "appliesTo": ["fontist"]
+  },
+  {
+    "vulnerability": "CVE-2026-126062",
+    "aliases": ["GHSA-v995-44v6-5fqm"],
+    "justification": "vulnerable_code_not_in_execute_path",
+    "statusNotes": "The advisory is JRuby-only (NONET parse bypass via a short-form IPv4 host). fontist ships the CRuby native nokogiri gem on the CRuby 3.3.12 tebako runtime, so JRuby code paths cannot execute. Verify no JRuby runtime variant is shipped in any distribution flavor.",
+    "appliesTo": ["fontist"]
+  }
+]
