@@ -106,6 +106,8 @@ async function cmdGenerate(
   }
   console.log(`Wrote NOTICE to ${result.noticePath}`);
   console.log(`Wrote lifecycle.json to ${result.lifecyclePath}`);
+  console.log(`Wrote OpenVEX statements to ${result.openvexPath}`);
+  console.log(`Wrote SHA256SUMS.txt to ${result.checksumsPath}`);
 }
 
 async function cmdValidate(
@@ -222,8 +224,19 @@ async function cmdDryRun(
       throw new Error("Dry-run failed: release notes stamping is not idempotent.");
     }
 
+    const openvexDoc = JSON.parse(
+      await readFile(result.openvexPath, "utf8"),
+    ) as { statements?: unknown };
+    if (!Array.isArray(openvexDoc.statements)) {
+      throw new Error("Dry-run failed: OpenVEX document has no statements array.");
+    }
+    const checksumsText = await readFile(result.checksumsPath, "utf8");
+    if (checksumsText.trim().length === 0) {
+      throw new Error("Dry-run failed: SHA256SUMS.txt is empty.");
+    }
+
     console.log(
-      `Dry-run passed: ${result.artifacts.length} artifact(s) scanned with syft ${result.syftVersion}, both SPDX 3.0 and CycloneDX 1.7 passed all 17 CISA 2026 elements, NOTICE and lifecycle.json generated, and release-notes stamping is idempotent.`,
+      `Dry-run passed: ${result.artifacts.length} artifact(s) scanned with syft ${result.syftVersion}, both SPDX 3.0 and CycloneDX 1.7 passed all 17 CISA 2026 elements and carry the structured support-until property, NOTICE, lifecycle.json, an OpenVEX document, and an attested-shape SHA256SUMS.txt were generated, and release-notes stamping is idempotent.`,
     );
   } finally {
     await rm(tmpOut, { recursive: true, force: true });

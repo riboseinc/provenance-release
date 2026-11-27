@@ -5,6 +5,7 @@ import {
   type ValidationReport,
 } from "./types.js";
 import type { CycloneDx17Document, Spdx3Document } from "./enrich.js";
+import { SUPPORT_UNTIL_PROPERTY } from "./enrich.js";
 
 // RFC 9557 / ISO 8601 timestamp with explicit timezone offset or Z.
 const RFC9557_TIMESTAMP =
@@ -475,6 +476,41 @@ export function validateCycloneDx17(
   }
 
   return finalizeReport("cyclonedx-1.7", failures);
+}
+
+/**
+ * Confirms both SBOM formats carry the structured `provenance:support-until`
+ * property required for CRA-style consumers. Returns the missing encodings
+ * (empty when both are present).
+ */
+export function missingStructuredSupportUntil(
+  spdx: Spdx3Document,
+  cdx: CycloneDx17Document,
+): string[] {
+  const missing: string[] = [];
+
+  const cdxPresent = (cdx?.metadata?.properties ?? []).some(
+    (p) => p.name === SUPPORT_UNTIL_PROPERTY && isNonEmptyString(p.value),
+  );
+  if (!cdxPresent) {
+    missing.push(`CycloneDX metadata.properties ${SUPPORT_UNTIL_PROPERTY}`);
+  }
+
+  const prefix = `${SUPPORT_UNTIL_PROPERTY}=`;
+  const spdxPresent = (
+    Array.isArray(spdx?.["@graph"]) ? spdx["@graph"] : []
+  ).some(
+    (n) =>
+      n.type === "Annotation" &&
+      isNonEmptyString(n.statement) &&
+      n.statement.startsWith(prefix) &&
+      n.statement.length > prefix.length,
+  );
+  if (!spdxPresent) {
+    missing.push(`SPDX Annotation ${prefix}<date>`);
+  }
+
+  return missing;
 }
 
 export function formatValidationReport(report: ValidationReport): string {

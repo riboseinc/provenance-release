@@ -109,6 +109,31 @@ describe("Ecosystem end-to-end provenance pipeline (syft v1.57.2+)", () => {
         assert.equal(lifecycle.supportUntil, "2031-11-18");
         assert.equal(lifecycle.releaseTag, "v1.0.0");
         assert.equal(lifecycle.attestation.status, "attested");
+
+        // Structured support-until is carried in both SBOM formats (machine-readable).
+        const supportProp = (cdx.metadata.properties ?? []).find(
+          (p) => p.name === "provenance:support-until",
+        );
+        assert.equal(supportProp?.value, "2031-11-18");
+        const spdxSupport = spdx["@graph"].find(
+          (n) =>
+            n.type === "Annotation" &&
+            n.statement === "provenance:support-until=2031-11-18",
+        );
+        assert.ok(
+          spdxSupport,
+          "SPDX 3.0 must carry the structured support-until annotation",
+        );
+
+        // OpenVEX and the attested-shape checksums file are emitted.
+        const openvex = JSON.parse(
+          await readFile(result.openvexPath, "utf8"),
+        ) as { statements: unknown[] };
+        assert.ok(Array.isArray(openvex.statements));
+        const checksums = await readFile(result.checksumsPath, "utf8");
+        assert.ok(checksums.includes("openvex.json"));
+        assert.ok(checksums.includes("lifecycle.json"));
+        assert.ok(checksums.includes("NOTICE"));
       } finally {
         await rm(outDir, { recursive: true, force: true });
       }
