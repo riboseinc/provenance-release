@@ -25,6 +25,8 @@ export interface OpenVexStatement {
   status: VexStatus;
   justification?: VexJustification;
   impact_statement?: string;
+  action_statement?: string;
+  action_statement_timestamp?: string;
   status_notes?: string;
 }
 
@@ -38,15 +40,16 @@ export interface OpenVexDocument {
 }
 
 /**
- * A curated "not affected" claim for a known-noisy advisory. Stored as data in
- * `tools/vex-statements.json` and merged into every release's OpenVEX document.
- * When `products` is omitted the claim applies to every shipped artifact.
+ * A curated VEX statement stored in `tools/vex-statements.json` and merged into
+ * matching releases' OpenVEX documents. Defaults to `status: "not_affected"`.
  */
 export interface CuratedVexStatement {
   vulnerability: string;
   aliases?: string[];
-  justification: VexJustification;
+  status?: VexStatus;
+  justification?: VexJustification;
   impactStatement?: string;
+  actionStatement?: string;
   statusNotes?: string;
   /**
    * Product names this claim applies to (e.g. ["fontist"]). Omit to apply the
@@ -55,6 +58,12 @@ export interface CuratedVexStatement {
    * VEX (where rake is present). Plain product names, not PURLs.
    */
   appliesTo?: string[];
+  /**
+   * Optional release-tag prefixes (e.g. ["3.0.10", "v3.0.10"]) scoping
+   * version-specific statements (`affected`, `under_investigation`) so they
+   * never taint newer, fixed releases.
+   */
+  releaseTagPrefixes?: string[];
 }
 
 /** Deterministic RFC 4122 version-5-shaped UUID derived from a seed string. */
@@ -100,27 +109,54 @@ export function buildOpenVexDocument(options: {
 }): OpenVexDocument {
   const defaultProducts = options.artifactPurls.map((purl) => ({ "@id": purl }));
 
-  // Only carry claims scoped to this product (or unscoped ones), so a claim
-  // about one package never appears in another package's VEX.
-  const applicable = options.statements.filter(
-    (s) =>
+  // Only carry claims scoped to this product and (if specified) release tag,
+  // so a claim about one package or old snapshot never leaks into another.
+  const applicable = options.statements.filter((s) => {
+    const productMatch =
       !s.appliesTo ||
       s.appliesTo.length === 0 ||
-      s.appliesTo.includes(options.productName),
-  );
+      s.appliesTo.includes(options.productName);
+    if (!productMatch) return false;
+    if (!s.releaseTagPrefixes || s.releaseTagPrefixes.length === 0) return true;
+    return s.releaseTagPrefixes.some((prefix) =>
+      options.releaseTag.startsWith(prefix),
+    );
+  });
 
   const statements: OpenVexStatement[] = applicable.map((curated) => {
+    const status: VexStatus = curated.status ?? "not_affected";
+    if (
+      status === "not_affected" &&
+      !curated.justification &&
+      !curated.impactStatement
+    ) {
+      throw new Error(
+        `OpenVEX not_affected statement for ${curated.vulnerability} must specify a justification or impactStatement.`,
+      );
+    }
+    if (status === "affected" && !curated.actionStatement) {
+      throw new Error(
+        `OpenVEX affected statement for ${curated.vulnerability} must specify an actionStatement.`,
+      );
+    }
+
     const statement: OpenVexStatement = {
       vulnerability: { name: curated.vulnerability },
       products: defaultProducts,
-      status: "not_affected",
-      justification: curated.justification,
+      status,
     };
+    if (curated.justification) {
+      statement.justification = curated.justification;
+    }
     if (curated.aliases && curated.aliases.length > 0) {
       statement.vulnerability.aliases = curated.aliases;
     }
     if (curated.impactStatement) {
       statement.impact_statement = curated.impactStatement;
+    }
+    if (curated.actionStatement) {
+      statement.action_statement = curated.actionStatement;
+      statement.action_statement_timestamp = options.timestamp;
     }
     if (curated.statusNotes) {
       statement.status_notes = curated.statusNotes;

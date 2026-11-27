@@ -2,6 +2,7 @@
   {
     "vulnerability": "CVE-2017-8418",
     "aliases": ["GHSA-wmjf-jpjj-9f3j"],
+    "status": "not_affected",
     "justification": "component_not_present",
     "statusNotes": "rubocop is a development-only Gemfile dependency and is absent from both the metanorma and fontist tebako shipped closures (tebako-packages/*/closure/*.txt); it is not part of the distributed binaries. The dev tree resolves rubocop ~> 1, far above the fixed 0.49.0.",
     "appliesTo": ["metanorma", "fontist"]
@@ -9,6 +10,7 @@
   {
     "vulnerability": "CVE-2020-36327",
     "aliases": ["GHSA-fp4w-jxhp-m23p"],
+    "status": "not_affected",
     "justification": "component_not_present",
     "statusNotes": "bundler is a development-only Gemfile dependency of fontist and is absent from the fontist tebako shipped closure; it is not part of the distributed binary.",
     "appliesTo": ["fontist"]
@@ -16,6 +18,7 @@
   {
     "vulnerability": "CVE-2021-43809",
     "aliases": ["GHSA-fj7f-vq84-fh43"],
+    "status": "not_affected",
     "justification": "component_not_present",
     "statusNotes": "bundler is a development-only Gemfile dependency of fontist and is absent from the fontist tebako shipped closure; it is not part of the distributed binary.",
     "appliesTo": ["fontist"]
@@ -23,6 +26,7 @@
   {
     "vulnerability": "CVE-2013-0334",
     "aliases": ["GHSA-49jx-9cmc-xjxm"],
+    "status": "not_affected",
     "justification": "component_not_present",
     "statusNotes": "bundler is a development-only Gemfile dependency of fontist and is absent from the fontist tebako shipped closure; it is not part of the distributed binary.",
     "appliesTo": ["fontist"]
@@ -30,6 +34,7 @@
   {
     "vulnerability": "CVE-2019-3881",
     "aliases": ["GHSA-g98m-96g9-wfjq"],
+    "status": "not_affected",
     "justification": "component_not_present",
     "statusNotes": "bundler is a development-only Gemfile dependency of fontist and is absent from the fontist tebako shipped closure; it is not part of the distributed binary.",
     "appliesTo": ["fontist"]
@@ -37,6 +42,7 @@
   {
     "vulnerability": "CVE-2016-7954",
     "aliases": ["GHSA-jvgm-pfqv-887x"],
+    "status": "not_affected",
     "justification": "component_not_present",
     "statusNotes": "bundler is a development-only Gemfile dependency of fontist and is absent from the fontist tebako shipped closure; it is not part of the distributed binary.",
     "appliesTo": ["fontist"]
@@ -44,6 +50,7 @@
   {
     "vulnerability": "CVE-2020-8130",
     "aliases": ["GHSA-jppv-gw3r-w3q8"],
+    "status": "not_affected",
     "justification": "component_not_present",
     "statusNotes": "rake is a development-only Gemfile dependency of fontist and is absent from the fontist tebako shipped closure. Scoped to fontist only: rake IS shipped in metanorma (a runtime dependency of google-protobuf), so this claim must never apply there.",
     "appliesTo": ["fontist"]
@@ -51,8 +58,98 @@
   {
     "vulnerability": "CVE-2026-126062",
     "aliases": ["GHSA-v995-44v6-5fqm"],
+    "status": "not_affected",
     "justification": "vulnerable_code_not_in_execute_path",
-    "statusNotes": "The advisory is JRuby-only (NONET parse bypass via a short-form IPv4 host). fontist ships the CRuby native nokogiri gem on the CRuby 3.3.12 tebako runtime, so JRuby code paths cannot execute. Verify no JRuby runtime variant is shipped in any distribution flavor.",
+    "statusNotes": "The advisory is JRuby-only (NONET parse bypass via a short-form IPv4 host). fontist ships the CRuby native nokogiri gem on the CRuby 3.3.12 tebako runtime, so JRuby code paths cannot execute.",
     "appliesTo": ["fontist"]
+  },
+  {
+    "vulnerability": "CVE-2026-126075",
+    "aliases": ["GHSA-2w9f-fxwj-w2qf"],
+    "status": "not_affected",
+    "justification": "vulnerable_code_not_in_execute_path",
+    "statusNotes": "Exploitation requires ActiveSupport::MessagePack (which requires the msgpack gem) and ERB rendering of a deserialized SafeBuffer. msgpack is absent from the fontist tebako closure (ActiveSupport::MessagePack cannot be loaded), and fontist is a CLI with no Rails/ERB web rendering.",
+    "appliesTo": ["fontist"]
+  },
+  {
+    "vulnerability": "CVE-2026-126063",
+    "aliases": ["GHSA-4p39-36wj-23h4"],
+    "status": "not_affected",
+    "justification": "vulnerable_code_not_in_execute_path",
+    "statusNotes": "Exploitation requires Nokogiri::HTML5 serialization of untrusted HTML containing noscript elements sent to a browser. fontist makes zero Nokogiri::HTML5 calls (macos_importer.rb has only an unused require; sil_importer.rb uses HTML4 Nokogiri::HTML.parse solely to extract download links) and never serves serialized HTML to browsers.",
+    "appliesTo": ["fontist"]
+  },
+  {
+    "vulnerability": "CVE-2026-126349",
+    "aliases": ["GHSA-539f-xcgw-2gjg"],
+    "status": "not_affected",
+    "justification": "vulnerable_code_not_in_execute_path",
+    "statusNotes": "Affects Addressable::URI#display_uri host display (bidi/invisible characters). fontist makes zero display_uri calls; addressable enters transitively via git/octokit/sawyer and is never used to render human-facing URIs.",
+    "appliesTo": ["fontist"]
+  },
+  {
+    "vulnerability": "CVE-2026-126348",
+    "aliases": ["GHSA-9crm-g4mf-wc5j"],
+    "status": "not_affected",
+    "justification": "vulnerable_code_not_in_execute_path",
+    "statusNotes": "Affects Addressable::URI#display_uri host display (invalid Punycode A-labels). fontist makes zero display_uri calls; addressable enters transitively via git/octokit/sawyer and is never used to render human-facing URIs.",
+    "appliesTo": ["fontist"]
+  },
+  {
+    "vulnerability": "CVE-2026-85396",
+    "aliases": ["GHSA-47m2-wp7j-p9vc"],
+    "status": "affected",
+    "actionStatement": "Upgrade the fontist tebako package beyond 3.0.10 (fontist >= 3.0.43 resolves rubyzip >= 3.7.0, fixing CVE-2026-85396). Until upgraded, do not run fontist upgrade-formulas against untrusted ZIP archives.",
+    "statusNotes": "fontist 3.0.10 ships rubyzip 2.4.1 (< 3.4.0) and lib/fontist/import/upgrade_formulas.rb#extract_zip passes unsanitized entry.name to Zip::Entry#extract.",
+    "appliesTo": ["fontist"],
+    "releaseTagPrefixes": ["3.0.10", "v3.0.10"]
+  },
+  {
+    "vulnerability": "CVE-2026-126080",
+    "aliases": ["GHSA-8474-xrp6-wh69"],
+    "status": "under_investigation",
+    "statusNotes": "fontist 3.0.10 ships activesupport 8.1.3 (< 8.1.4.1). Direct fontist code does not call safe_constantize, but ActiveSupport internals have not been exhaustively audited; resolved by rebuilding fontist on >= 3.0.43 (activesupport >= 8.1.4.1).",
+    "appliesTo": ["fontist"],
+    "releaseTagPrefixes": ["3.0.10", "v3.0.10"]
+  },
+  {
+    "vulnerability": "CVE-2026-126064",
+    "aliases": ["GHSA-3w22-6jfg-527w"],
+    "status": "under_investigation",
+    "statusNotes": "fontist 3.0.10 ships CRuby nokogiri 1.19.4 (< 1.19.5) and moxml wraps nokogiri XML node manipulation. Reachability of Node#[]= attribute replacement on untrusted XML is not disproven; resolved by rebuilding fontist on >= 3.0.43 (nokogiri >= 1.19.5).",
+    "appliesTo": ["fontist"],
+    "releaseTagPrefixes": ["3.0.10", "v3.0.10"]
+  },
+  {
+    "vulnerability": "CVE-2026-126352",
+    "aliases": ["GHSA-9f42-57jx-vpp3"],
+    "status": "under_investigation",
+    "statusNotes": "fontist 3.0.10 ships addressable 2.9.0 (< 2.9.1) and sawyer (via octokit) uses Addressable::Template for GitHub API hypermedia links. Resolved by rebuilding fontist on >= 3.0.43 (addressable >= 2.9.1).",
+    "appliesTo": ["fontist"],
+    "releaseTagPrefixes": ["3.0.10", "v3.0.10"]
+  },
+  {
+    "vulnerability": "CVE-2026-126350",
+    "aliases": ["GHSA-j82w-28jv-3pmj"],
+    "status": "under_investigation",
+    "statusNotes": "fontist 3.0.10 ships addressable 2.9.0 (< 2.9.1) and sawyer (via octokit) uses Addressable::Template for GitHub API hypermedia links. Resolved by rebuilding fontist on >= 3.0.43 (addressable >= 2.9.1).",
+    "appliesTo": ["fontist"],
+    "releaseTagPrefixes": ["3.0.10", "v3.0.10"]
+  },
+  {
+    "vulnerability": "CVE-2026-126354",
+    "aliases": ["GHSA-8gmh-2hhj-2hv9"],
+    "status": "under_investigation",
+    "statusNotes": "fontist 3.0.10 ships addressable 2.9.0 (< 2.9.1); URI normalization is reachable through transitive HTTP/GitHub clients. Resolved by rebuilding fontist on >= 3.0.43 (addressable >= 2.9.1).",
+    "appliesTo": ["fontist"],
+    "releaseTagPrefixes": ["3.0.10", "v3.0.10"]
+  },
+  {
+    "vulnerability": "CVE-2026-126351",
+    "aliases": ["GHSA-qq38-m9mg-xjj5"],
+    "status": "under_investigation",
+    "statusNotes": "fontist 3.0.10 ships addressable 2.9.0 (< 2.9.1); URI path normalization DoS is reachable through transitive HTTP/GitHub clients. Resolved by rebuilding fontist on >= 3.0.43 (addressable >= 2.9.1).",
+    "appliesTo": ["fontist"],
+    "releaseTagPrefixes": ["3.0.10", "v3.0.10"]
   }
 ]
