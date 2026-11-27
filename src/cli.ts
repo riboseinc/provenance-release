@@ -71,7 +71,12 @@ async function cmdGenerate(
   const artifactsPath = requireString(flags, "artifacts");
   const outputDir = requireString(flags, "output-dir");
   const releaseTag = requireString(flags, "release-tag");
-  const supportUntil = requireString(flags, "support-until");
+  const supportUntilRaw = flags["support-until"];
+  const supportUntil =
+    typeof supportUntilRaw === "string" && supportUntilRaw.trim().length > 0
+      ? supportUntilRaw
+      : undefined;
+  const vex = getBool(flags, "vex", true);
   const author = requireString(flags, "author");
   const repository = requireString(flags, "repository");
   const supplier =
@@ -88,6 +93,7 @@ async function cmdGenerate(
     outputDir,
     releaseTag,
     supportUntil,
+    vex,
     author,
     repository,
     attest,
@@ -106,7 +112,9 @@ async function cmdGenerate(
   }
   console.log(`Wrote NOTICE to ${result.noticePath}`);
   console.log(`Wrote lifecycle.json to ${result.lifecyclePath}`);
-  console.log(`Wrote OpenVEX statements to ${result.openvexPath}`);
+  if (result.openvexPath) {
+    console.log(`Wrote OpenVEX statements to ${result.openvexPath}`);
+  }
   console.log(`Wrote SHA256SUMS.txt to ${result.checksumsPath}`);
 }
 
@@ -147,7 +155,11 @@ async function cmdStampNotes(
 ): Promise<void> {
   const inputPath = requireString(flags, "input");
   const outputPath = requireString(flags, "output");
-  const supportUntil = requireString(flags, "support-until");
+  const supportUntilRaw = flags["support-until"];
+  const supportUntil =
+    typeof supportUntilRaw === "string" && supportUntilRaw.trim().length > 0
+      ? supportUntilRaw
+      : undefined;
   const releaseTag = requireString(flags, "release-tag");
   const repository = requireString(flags, "repository");
   const attest = getBool(flags, "attest", true);
@@ -224,6 +236,9 @@ async function cmdDryRun(
       throw new Error("Dry-run failed: release notes stamping is not idempotent.");
     }
 
+    if (!result.openvexPath) {
+      throw new Error("Dry-run failed: OpenVEX document was not generated.");
+    }
     const openvexDoc = JSON.parse(
       await readFile(result.openvexPath, "utf8"),
     ) as { statements?: unknown };

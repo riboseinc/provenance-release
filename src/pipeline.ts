@@ -26,7 +26,11 @@ import {
   validateCycloneDx17,
   validateSpdx3,
 } from "./validate.js";
-import { buildOpenVexDocument, loadCuratedVexStatements } from "./vex.js";
+import {
+  buildOpenVexDocument,
+  loadCuratedVexStatements,
+  type OpenVexDocument,
+} from "./vex.js";
 
 async function computeDirectoryDigest(dirPath: string): Promise<string> {
   const hash = createHash("sha256");
@@ -118,7 +122,10 @@ async function resolveScanTargets(
 export async function runProvenancePipeline(
   options: PipelineOptions,
 ): Promise<PipelineResult> {
-  const supportUntil = validateSupportUntil(options.supportUntil);
+  const supportUntil = options.supportUntil
+    ? validateSupportUntil(options.supportUntil)
+    : undefined;
+  const vexEnabled = options.vex !== false;
   const repoRoot = options.repoRoot ?? process.cwd();
   const isPrivateRepo = options.isPrivateRepo ?? false;
   const supplier = options.supplier ?? options.author;
@@ -212,14 +219,16 @@ export async function runProvenancePipeline(
       );
     }
 
-    const missingSupport = missingStructuredSupportUntil(
-      enrichedSpdx,
-      enrichedCdx,
-    );
-    if (missingSupport.length > 0) {
-      throw new Error(
-        `Structured support-until metadata missing for "${target.name}": ${missingSupport.join(", ")}`,
+    if (supportUntil) {
+      const missingSupport = missingStructuredSupportUntil(
+        enrichedSpdx,
+        enrichedCdx,
       );
+      if (missingSupport.length > 0) {
+        throw new Error(
+          `Structured support-until metadata missing for "${target.name}": ${missingSupport.join(", ")}`,
+        );
+      }
     }
 
     if (!target.isDirectory) {
@@ -267,26 +276,37 @@ export async function runProvenancePipeline(
     "utf8",
   );
 
-  const artifactPurls = enrichedCdxDocs
-    .map((doc) => doc.metadata.component?.purl)
-    .filter((purl): purl is string => Boolean(purl));
-  const curatedStatements = await loadCuratedVexStatements(repoRoot);
-  const openvex = buildOpenVexDocument({
-    author: options.author,
-    timestamp,
-    repository: options.repository,
-    releaseTag: options.releaseTag,
-    artifactPurls,
-    statements: curatedStatements,
-  });
-  const openvexPath = path.join(options.outputDir, "openvex.json");
-  await writeFile(openvexPath, `${JSON.stringify(openvex, null, 2)}\n`, "utf8");
-
   checksumEntries.push(
     { name: "NOTICE", sha256: await computeFileSha256(noticePath) },
     { name: "lifecycle.json", sha256: await computeFileSha256(lifecyclePath) },
-    { name: "openvex.json", sha256: await computeFileSha256(openvexPath) },
   );
+
+  let openvex: OpenVexDocument | undefined;
+  let openvexPath: string | undefined;
+  if (vexEnabled) {
+    const artifactPurls = enrichedCdxDocs
+      .map((doc) => doc.metadata.component?.purl)
+      .filter((purl): purl is string => Boolean(purl));
+    const curatedStatements = await loadCuratedVexStatements(repoRoot);
+    openvex = buildOpenVexDocument({
+      author: options.author,
+      timestamp,
+      repository: options.repository,
+      releaseTag: options.releaseTag,
+      artifactPurls,
+      statements: curatedStatements,
+    });
+    openvexPath = path.join(options.outputDir, "openvex.json");
+    await writeFile(
+      openvexPath,
+      `${JSON.stringify(openvex, null, 2)}\n`,
+      "utf8",
+    );
+    checksumEntries.push({
+      name: "openvex.json",
+      sha256: await computeFileSha256(openvexPath),
+    });
+  }
 
   const checksumsPath = path.join(options.outputDir, "SHA256SUMS.txt");
   await writeFile(checksumsPath, buildChecksumsFile(checksumEntries), "utf8");

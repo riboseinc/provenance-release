@@ -18,9 +18,15 @@ on:
         type: string
         default: ""
       support-until:
-        description: "Declared support end date for this release stream in YYYY-MM-DD format."
-        required: true
+        description: "Declared support end date for this release stream in YYYY-MM-DD format. Omit to assert no support claim (upstream-owned software)."
+        required: false
         type: string
+        default: ""
+      vex:
+        description: "Emit an OpenVEX statement set. Disable for upstream-owned packages that carry no VEX claims of their own."
+        required: false
+        type: boolean
+        default: true
       author:
         description: "SBOM author identity. Defaults to the repository owner when omitted."
         required: false
@@ -149,6 +155,7 @@ jobs:
           OUTPUT_DIR: ${{ steps.ctx.outputs.output_dir }}
           RELEASE_TAG: ${{ steps.ctx.outputs.release_tag }}
           SUPPORT_UNTIL: ${{ inputs.support-until }}
+          VEX_INPUT: ${{ inputs.vex }}
           AUTHOR: ${{ steps.ctx.outputs.author }}
           SUPPLIER: ${{ steps.ctx.outputs.supplier }}
           ATTEST_INPUT: ${{ inputs.attest }}
@@ -160,6 +167,7 @@ jobs:
             --output-dir "${OUTPUT_DIR}" \
             --release-tag "${RELEASE_TAG}" \
             --support-until "${SUPPORT_UNTIL}" \
+            --vex "${VEX_INPUT}" \
             --author "${AUTHOR}" \
             --supplier "${SUPPLIER}" \
             --repository "${GITHUB_REPOSITORY}" \
@@ -197,9 +205,11 @@ jobs:
             "${OUTPUT_DIR}"/*.cdx.json
             "${OUTPUT_DIR}/NOTICE"
             "${OUTPUT_DIR}/lifecycle.json"
-            "${OUTPUT_DIR}/openvex.json"
             "${OUTPUT_DIR}/SHA256SUMS.txt"
           )
+          if [ -f "${OUTPUT_DIR}/openvex.json" ]; then
+            ASSETS+=( "${OUTPUT_DIR}/openvex.json" )
+          fi
 
           gh release upload "${RELEASE_TAG}" "${ASSETS[@]}" \
             --repo "${GITHUB_REPOSITORY}" \

@@ -56,13 +56,15 @@ export function resolveAttestationStatus(
 export function buildLifecycleDocument(params: {
   repository: string;
   releaseTag: string;
-  supportUntil: string;
+  supportUntil?: string | undefined;
   author: string;
   attest: boolean;
   isPrivateRepo: boolean;
   publishedAt?: string;
 }): LifecycleDocument {
-  const supportUntil = validateSupportUntil(params.supportUntil);
+  const supportUntil = params.supportUntil
+    ? validateSupportUntil(params.supportUntil)
+    : undefined;
   const status = resolveAttestationStatus(params.attest, params.isPrivateRepo);
 
   return {
@@ -80,12 +82,14 @@ export function buildLifecycleDocument(params: {
 }
 
 export function renderSupportPeriodSection(params: {
-  supportUntil: string;
+  supportUntil?: string | undefined;
   releaseTag: string;
   repository: string;
   attestationStatus: AttestationStatus;
 }): string {
-  const supportUntil = validateSupportUntil(params.supportUntil);
+  const supportUntil = params.supportUntil
+    ? validateSupportUntil(params.supportUntil)
+    : undefined;
   const attestationLine =
     params.attestationStatus === "attested"
       ? `Build provenance for this release is keylessly signed with Sigstore and can be verified with \`gh attestation verify <artifact> -R ${params.repository}\`.`
@@ -93,12 +97,16 @@ export function renderSupportPeriodSection(params: {
         ? "Build provenance attestation was skipped automatically because this repository is private."
         : "Build provenance attestation was disabled for this release.";
 
+  const supportLine = supportUntil
+    ? `This release (\`${params.releaseTag}\`) is supported until **${supportUntil}** (UTC). The declared support date is also carried as the structured \`provenance:support-until\` property in both SBOM formats.`
+    : `No support end date is asserted for this release; it is distributed as-is without a vendor support commitment.`;
+
   return [
     SUPPORT_PERIOD_START_MARKER,
     "## Support Period and Provenance",
     "",
-    `This release (\`${params.releaseTag}\`) is supported until **${supportUntil}** (UTC).`,
-    "The machine-readable lifecycle record is attached to this release as `lifecycle.json`, alongside SPDX 3.0 (`*.spdx.json`), CycloneDX 1.7 (`*.cdx.json`), an OpenVEX statement set (`openvex.json`), `NOTICE`, and the release checksums (`SHA256SUMS.txt`). The declared support date is also carried as the structured `provenance:support-until` property in both SBOM formats.",
+    supportLine,
+    "The machine-readable lifecycle record is attached to this release as `lifecycle.json`, alongside SPDX 3.0 (`*.spdx.json`), CycloneDX 1.7 (`*.cdx.json`), `NOTICE`, the release checksums (`SHA256SUMS.txt`), and — where the VEX lane is enabled — an OpenVEX statement set (`openvex.json`).",
     `The checksums file is itself attested; verify the entire release with \`gh attestation verify SHA256SUMS.txt -R ${params.repository}\`.`,
     attestationLine,
     SUPPORT_PERIOD_END_MARKER,
@@ -112,7 +120,7 @@ export function renderSupportPeriodSection(params: {
 export function stampReleaseNotes(
   existingBody: string,
   params: {
-    supportUntil: string;
+    supportUntil?: string | undefined;
     releaseTag: string;
     repository: string;
     attestationStatus: AttestationStatus;

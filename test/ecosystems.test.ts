@@ -126,8 +126,10 @@ describe("Ecosystem end-to-end provenance pipeline (syft v1.57.2+)", () => {
         );
 
         // OpenVEX and the attested-shape checksums file are emitted.
+        const vexPath = result.openvexPath;
+        assert.ok(vexPath, "OpenVEX document must be emitted for the full tier");
         const openvex = JSON.parse(
-          await readFile(result.openvexPath, "utf8"),
+          await readFile(vexPath, "utf8"),
         ) as { statements: unknown[] };
         assert.ok(Array.isArray(openvex.statements));
         const checksums = await readFile(result.checksumsPath, "utf8");
