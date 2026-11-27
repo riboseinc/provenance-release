@@ -14,10 +14,17 @@ reference an auditor can re-verify).
 - `<artifact>.attestation*` — SLSA Build Level 3 provenance, keylessly
   signed through Sigstore, verifiable with
   `gh attestation verify <artifact> -R <repo>`.
+- `<artifact>.openvex.json` — an OpenVEX statement set: valid and empty to
+  start, growing curated "not affected" claims for known-noisy advisories.
 - NOTICE/ATTRIBUTION — the license and copyright notices the shipped
   licenses require, generated rather than hand-maintained.
+- `SHA256SUMS.txt` — a GNU `sha256sum` checksums file covering every shipped
+  file. The checksums file is itself keylessly attested, so the whole release
+  verifies with `gh attestation verify SHA256SUMS.txt -R <repo>`.
 - The declared support period for the release stream, stamped into the
-  release metadata (the CRA Article 14 field, answered in advance).
+  release metadata (the CRA Article 14 field, answered in advance) and
+  carried as the structured `provenance:support-until` property in both SBOM
+  formats, machine-readable for CRA-style consumers.
 
 Every SBOM is validated against the CISA 2026 Minimum Elements before
 it attaches to the release. A validation failure fails the release.
