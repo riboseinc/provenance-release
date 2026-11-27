@@ -85,4 +85,64 @@ describe("OpenVEX document generation", () => {
       { "@id": "pkg:generic/app@1.0.0" },
     ]);
   });
+
+  it("supports affected and under_investigation statuses with release-tag scoping", () => {
+    const statements = [
+      {
+        vulnerability: "CVE-2026-85396",
+        status: "affected" as const,
+        actionStatement: "Upgrade past 3.0.10.",
+        appliesTo: ["fontist"],
+        releaseTagPrefixes: ["3.0.10", "v3.0.10"],
+      },
+      {
+        vulnerability: "CVE-2026-126080",
+        status: "under_investigation" as const,
+        appliesTo: ["fontist"],
+        releaseTagPrefixes: ["3.0.10", "v3.0.10"],
+      },
+    ];
+
+    const on3010 = buildOpenVexDocument({
+      ...base,
+      productName: "fontist",
+      releaseTag: "3.0.10-2",
+      statements,
+    });
+    assert.equal(on3010.statements.length, 2);
+    assert.equal(on3010.statements[0]!.status, "affected");
+    assert.equal(
+      on3010.statements[0]!.action_statement,
+      "Upgrade past 3.0.10.",
+    );
+    assert.equal(
+      on3010.statements[0]!.action_statement_timestamp,
+      base.timestamp,
+    );
+    assert.equal(on3010.statements[1]!.status, "under_investigation");
+
+    // Fixed newer release must not inherit old-snapshot affected claims.
+    const on3043 = buildOpenVexDocument({
+      ...base,
+      productName: "fontist",
+      releaseTag: "3.0.43",
+      statements,
+    });
+    assert.equal(on3043.statements.length, 0);
+  });
+
+  it("enforces OpenVEX required fields per status", () => {
+    assert.throws(() =>
+      buildOpenVexDocument({
+        ...base,
+        statements: [{ vulnerability: "CVE-2026-00001", status: "not_affected" }],
+      }),
+    );
+    assert.throws(() =>
+      buildOpenVexDocument({
+        ...base,
+        statements: [{ vulnerability: "CVE-2026-00002", status: "affected" }],
+      }),
+    );
+  });
 });
