@@ -293,6 +293,7 @@ export async function runProvenancePipeline(
       timestamp,
       repository: options.repository,
       releaseTag: options.releaseTag,
+      productName: options.repository.split("/").pop() ?? options.repository,
       artifactPurls,
       statements: curatedStatements,
     });

@@ -48,8 +48,13 @@ export interface CuratedVexStatement {
   justification: VexJustification;
   impactStatement?: string;
   statusNotes?: string;
-  /** PURLs the claim applies to. Omit to apply it to every shipped artifact. */
-  products?: string[];
+  /**
+   * Product names this claim applies to (e.g. ["fontist"]). Omit to apply the
+   * claim to every product. Scopes a claim to the right release so, for
+   * example, a fontist-only "rake is absent" claim never lands in metanorma's
+   * VEX (where rake is present). Plain product names, not PURLs.
+   */
+  appliesTo?: string[];
 }
 
 /** Deterministic RFC 4122 version-5-shaped UUID derived from a seed string. */
@@ -89,20 +94,25 @@ export function buildOpenVexDocument(options: {
   timestamp: string;
   repository: string;
   releaseTag: string;
+  productName: string;
   artifactPurls: string[];
   statements: CuratedVexStatement[];
 }): OpenVexDocument {
   const defaultProducts = options.artifactPurls.map((purl) => ({ "@id": purl }));
 
-  const statements: OpenVexStatement[] = options.statements.map((curated) => {
-    const products =
-      curated.products && curated.products.length > 0
-        ? curated.products.map((purl) => ({ "@id": purl }))
-        : defaultProducts;
+  // Only carry claims scoped to this product (or unscoped ones), so a claim
+  // about one package never appears in another package's VEX.
+  const applicable = options.statements.filter(
+    (s) =>
+      !s.appliesTo ||
+      s.appliesTo.length === 0 ||
+      s.appliesTo.includes(options.productName),
+  );
 
+  const statements: OpenVexStatement[] = applicable.map((curated) => {
     const statement: OpenVexStatement = {
       vulnerability: { name: curated.vulnerability },
-      products,
+      products: defaultProducts,
       status: "not_affected",
       justification: curated.justification,
     };

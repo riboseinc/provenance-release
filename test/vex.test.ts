@@ -8,6 +8,7 @@ describe("OpenVEX document generation", () => {
     timestamp: "2026-11-27T00:00:00.000Z",
     repository: "example-org/example-project",
     releaseTag: "v1.0.0",
+    productName: "app",
     artifactPurls: ["pkg:generic/app@1.0.0"],
     statements: [],
   };
@@ -55,20 +56,33 @@ describe("OpenVEX document generation", () => {
     assert.equal(stmt.impact_statement, "The vulnerable path is never exercised.");
   });
 
-  it("honours explicit product scoping on a curated statement", () => {
-    const doc = buildOpenVexDocument({
+  it("scopes curated statements to the named product", () => {
+    const statements = [
+      {
+        vulnerability: "CVE-2023-99999",
+        justification: "component_not_present" as const,
+        appliesTo: ["fontist"],
+      },
+    ];
+
+    // Not this product (base productName is "app"): the claim is omitted.
+    const forApp = buildOpenVexDocument({ ...base, statements });
+    assert.equal(forApp.statements.length, 0);
+
+    // For fontist: the claim is included, scoped to the release's artifacts.
+    const forFontist = buildOpenVexDocument({
       ...base,
-      statements: [
-        {
-          vulnerability: "CVE-2023-99999",
-          justification: "component_not_present",
-          products: ["pkg:generic/other@2.0.0"],
-        },
-      ],
+      productName: "fontist",
+      statements,
     });
-    assert.deepEqual(doc.statements[0]!.products, [
-      { "@id": "pkg:generic/other@2.0.0" },
+    assert.equal(forFontist.statements.length, 1);
+    assert.equal(forFontist.statements[0]!.status, "not_affected");
+    assert.equal(
+      forFontist.statements[0]!.justification,
+      "component_not_present",
+    );
+    assert.deepEqual(forFontist.statements[0]!.products, [
+      { "@id": "pkg:generic/app@1.0.0" },
     ]);
-    assert.equal(doc.statements[0]!.status, "not_affected");
   });
 });
